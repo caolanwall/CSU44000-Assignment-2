@@ -1,0 +1,105 @@
+<!-- development version, includes helpful console warnings -->
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+
+<div id="app">
+    <h1>Welcome to the Movie Finder</h1>
+    
+    <button v-if ="!created" v-on:click="Create">Create the movie table</button>    <!-- if table doesnt exist, call Create on click-->
+
+    <span v-if="created">                   <!-- if table exits-->
+        <h3>Please enter the title and the year of release of a movie</h3>
+        Title: <input v-model="title"><br><br>
+        Year: <input v-model="year"><br><br>
+        <button v-on:click="Query">Search</button>  <!-- call Query on click -->
+        <br>
+    </span>
+
+    <span v-if="requestRecieved">           <!-- if movies-->
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Year</th>
+                    <th>Rank</th>
+                </tr>
+            </thead>
+            <tr v-for="movie in row">       <!-- print movies-->
+                <th>{{movie.title}}</th>
+                <th>{{movie.year}}</th>
+                <th>{{movie.rank}}</th>
+            </tr>
+        </table>
+    </span> 
+
+    <br>
+    <button v-if ="created" v-on:click="Delete">Delete the movie table</button>     <!-- if table exists, call delete on click-->
+
+</div> 
+
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: function() { 
+            return {
+                requestRecieved : false,
+                title: "",
+                year: 0,
+                row: [],
+                created: false,
+            }
+        },
+        methods: {
+            Query: async function() {
+                console.log("Query " + this.title)
+                this.row = [];
+                let prom = await fetch("/query/" + this.title + "/" + this.year)    //get movies
+                .then(response => response.json())
+                    .then(response => {
+                        this.response = response.result
+                        console.log(this.response);
+                })
+
+                for(i = 0; i < this.response.length; i++){  //add movies to row array
+                    let movie = {title: this.response[i].title, year: this.response[i].year, rank: this.response[i].rank}
+                    this.row.push(movie)
+                }
+                console.log(this.row)
+
+                this.requestRecieved = 1;
+            },
+            Check: async function(){                    //check to see if the movies table already exists
+            let prom = await fetch("/check")
+                .then(response => response.json())
+                    .then(response => {
+                        this.created = response.success //set created variable for conditional rendering
+                        console.log(response);
+                })
+            },
+            Create: async function(){                   //fetch create table
+                let prom = await fetch("/create")
+                .then(response => response.json())
+                    .then(response => {
+                        this.created = response.success //set created variable for conditional rendering
+                        console.log(this.response);
+                })
+            },
+            Delete: async function(){                   //fetch delete table
+                let prom = await fetch("/delete")
+                .then(response => response.json())
+                    .then(response => {
+                        if(response.success){
+                            this.created = false        //set created variable for conditional rendering
+                            this.requestRecieved = false    //remove the last query from screen
+                        } else {
+                            this.created = true
+                        }
+                        console.log(this.response);
+                })
+            }
+    },
+    beforeMount(){
+        this.Check()                                    //check if table exists
+ },
+    })
+</script>
